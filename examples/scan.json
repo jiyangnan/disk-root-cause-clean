@@ -1,0 +1,37 @@
+{
+  "mode": "scan", "machine": "demo", "date": "2026-10-29",
+  "disk": {"total_gib": 460, "avail_gib": 30.0, "used_pct": 93},
+  "findings": [
+    {"category": "iOS 旧调试符号", "gb": 13.0, "tier": "safe"},
+    {"category": "飞书 Service Worker 缓存", "gb": 5.8, "tier": "safe"},
+    {"category": "uv 缓存", "gb": 3.5, "tier": "safe"},
+    {"category": "微信更新安装包", "gb": 2.9, "tier": "safe"},
+    {"category": "Docker 停止容器", "gb": 3.0, "tier": "safe"},
+    {"category": "更新器缓存×4", "gb": 1.6, "tier": "safe"},
+    {"category": "npm 缓存", "gb": 0.9, "tier": "safe"},
+    {"category": "worktree 森林×26", "gb": 8.4, "tier": "confirm"},
+    {"category": "九月执行工件", "gb": 4.4, "tier": "confirm"},
+    {"category": "vendored Flutter SDK", "gb": 4.3, "tier": "confirm"},
+    {"category": "完结视频项目依赖", "gb": 2.7, "tier": "confirm"},
+    {"category": "AI 助手旧会话(≤9月)", "gb": 2.6, "tier": "confirm"},
+    {"category": "浏览器一次性 profile", "gb": 1.5, "tier": "confirm"},
+    {"category": "已卸载工具残留", "gb": 1.2, "tier": "confirm"},
+    {"category": "npm 闲置全局包", "gb": 0.95, "tier": "confirm"},
+    {"category": "iCloud 本地副本", "gb": 41.0, "tier": "excluded"},
+    {"category": "Android SDK(用户排除)", "gb": 15.0, "tier": "excluded"},
+    {"category": "十月执行工件(项目活跃)", "gb": 9.6, "tier": "excluded"},
+    {"category": "运行中 app 缓存", "gb": 4.5, "tier": "excluded"},
+    {"category": "AI 助手索引库", "gb": 3.3, "tier": "excluded"},
+    {"category": "AVD 快照", "gb": 3.0, "tier": "excluded"}
+  ],
+  "distribution": [2301.6,1221.5,1188.7,947.6,811.4,693.9,618.6,573.3,499.6,499.2,498.6,476.6,452.7,404.9,404.9,404.9,404.9,404.9,404.9,400.2,400.2,390.2,376.2,367.6,287.6,287.6,270.6,192.2,181.5,153.3,152.9,152.9,147.6,147.6,147.6,147.2,147.2,136.2,121.1,100.1,99.8,99.8,92.1,90.6,88.7,80.1,68.5,59.4,51.8,50.6,34.4,33.5,33.1,32.7,26.4,26.2,18.3,18.2,17.1,17.1,17.1,16.9,16.8,16.4,14.1,10.3,9.6,7.1,7.1,7.1,7.1,6.2,5.5,5.2,4.6,4.6,3.2,3.2,3.1,2.7,0.9,0.7,0.2,0.2,0.2,0.2,0.2,0.2,0.1,0.1,0.1,0.1],
+  "potential": [
+    {"name": "iCloud 本地副本(优化存储)", "gb": 41},
+    {"name": "Android SDK(你已排除)", "gb": 15},
+    {"name": "十月执行工件(项目活跃)", "gb": 9.6},
+    {"name": "运行中 app 缓存(Notion/Chrome)", "gb": 4.5},
+    {"name": "AI 助手索引库", "gb": 3.3},
+    {"name": "AVD 快照(Android 相关)", "gb": 3},
+    {"name": "sudo 系统区(遥测DB可达~10G)", "gb": 9.7}
+  ]
+}

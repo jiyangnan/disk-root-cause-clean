@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>磁盘清理战报</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+:root { color-scheme: light; }
+.viz-root { --surface-1:#fcfcfb; --page:#f9f9f7; --text-1:#0b0b0b; --text-2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --baseline:#c3c2b7; --ring:rgba(11,11,11,0.10);
+  --s1:#2a78d6; --s1-deep:#1c5cab; --s1-wash:#86b6ef; --s2:#eb6834; }
+@media (prefers-color-scheme: dark) { .viz-root { color-scheme: dark;
+  --surface-1:#1a1a19; --page:#0d0d0d; --text-1:#f0efec; --text-2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --baseline:#383835; --ring:rgba(255,255,255,0.10);
+  --s1:#3987e5; --s1-deep:#6da7ec; --s1-wash:#1c5cab; --s2:#d95926; } }
+* { margin:0; padding:0; box-sizing:border-box; }
+body.viz-root { background:var(--page); color:var(--text-1);
+  font-family:system-ui,-apple-system,"Segoe UI","PingFang SC",sans-serif;
+  padding:32px clamp(16px,4vw,56px) 48px; max-width:1200px; margin:0 auto; }
+h1 { font-size:26px; font-weight:700; letter-spacing:-0.01em; }
+.sub { color:var(--text-2); font-size:14px; margin:6px 0 28px; }
+.kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin-bottom:26px; }
+.tile { background:var(--surface-1); border:1px solid var(--ring); border-radius:10px; padding:18px 20px 16px; }
+.tile .label { font-size:13px; color:var(--text-2); }
+.tile .value { font-size:34px; font-weight:600; margin-top:6px; line-height:1.1; }
+.tile .value small { font-size:17px; font-weight:500; color:var(--text-2); margin-left:2px; }
+.tile .delta { font-size:13px; margin-top:6px; color:var(--text-2); }
+.tile.hero .value { font-size:44px; }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+@media (max-width:860px){ .grid2 { grid-template-columns:1fr; } }
+.card { background:var(--surface-1); border:1px solid var(--ring); border-radius:10px; padding:18px 20px 12px; margin-bottom:14px; }
+.card h2 { font-size:15px; font-weight:650; }
+.card .note { font-size:12px; color:var(--muted); margin-top:2px; }
+.chart { width:100%; height:340px; } .chart.tall { height:420px; }
+.banner { background:var(--surface-1); border:1px solid var(--ring); border-left:3px solid var(--s1);
+  border-radius:8px; padding:12px 16px; font-size:14px; color:var(--text-2); margin-bottom:26px; }
+footer { color:var(--muted); font-size:12px; line-height:1.7; margin-top:10px; border-top:1px solid var(--grid); padding-top:14px; }
+</style></head><body class="viz-root">
+<header><h1>磁盘清理战报</h1><div class="sub">demo · 2026-10-29 · 前后对比 · 口径见注脚</div></header>
+<div class="tile hero"><div class="label">本次释放可用空间</div><div class="value">+91<small>GiB</small></div><div class="delta">30.0 → 121.0 GiB · 使用率 93% → 72%</div></div><div class="tile "><div class="label">主动清理</div><div class="value">~70<small>GB</small></div><div class="delta">10 项 · 零数据损失</div></div><div class="tile "><div class="label">根因类别</div><div class="value">9<small>类</small></div><div class="delta">按根因分类清理</div></div><div class="tile "><div class="label">剩余可清潜力</div><div class="value">~86<small>GB</small></div><div class="delta">未动项,见下表</div></div>
+
+<div class="card"><h2>本次清理构成 · 按根因类别</h2>
+  <div class="note">du 口径 · 含逐项确认层 · 面积=GB</div><div id="compose" class="chart tall"></div></div>
+<div class="grid2">
+<div class="card"><h2>可用空间时间线</h2><div class="note">df 实测 · 陡升台阶即清理动作</div><div id="timeline" class="chart"></div></div>
+<div class="card"><h2>清理前后 · 分项对比</h2><div class="note">浅点=清理前 · 深点=现状 · 线长=释放量</div><div id="dumbbell" class="chart tall"></div></div><div class="card"><h2>node_modules 森林 · 尺寸分布</h2><div class="note">对数轴 · 长尾分布</div><div id="boxplot" class="chart"></div></div><div class="card"><h2>剩余可清潜力</h2><div class="note">未动项 · 等你后续决策 · 单位 GB</div><div id="potential" class="chart"></div></div>
+</div>
+<footer><b>口径</b>：GB 为 du 十进制口径，GiB 为 df 二进制口径，相差约 7% 属正常。
+<b>分层</b>：安全层=零数据损失；待确认=涉个人数据需逐项勾选；排除=按用户指示保留。</footer>
+<script>
+
+const DATA = {"mode": "cleaned", "kpis": 4, "findings": [{"name": "调试符号与 vendored SDK", "value": 17.3, "tier": "confirm"}, {"name": "执行工件与 worktree", "value": 15.5, "tier": "confirm"}, {"name": "应用缓存(协作套件/七应用)", "value": 9.3, "tier": "confirm"}, {"name": "包管理器缓存", "value": 8.9, "tier": "confirm"}, {"name": "失控日志与更新器", "value": 5.9, "tier": "confirm"}, {"name": "端侧 AI 模型", "value": 4.0, "tier": "confirm"}, {"name": "Docker 停止容器", "value": 3.0, "tier": "confirm"}, {"name": "卸载残留与一次性 profile", "value": 2.7, "tier": "confirm"}, {"name": "AI 助手旧会话", "value": 2.4, "tier": "confirm"}], "actions": [["Docker.raw(35→17)", 35, 17], ["iOS 调试符号(25→12)", 25, 12], ["执行工件(14→9.6)", 14, 9.6], [".worktrees(8.4→0)", 8.4, 0], ["AI 助手目录(10→7.4)", 10, 7.4], ["协作套件缓存(7→1.2)", 7, 1.2], ["视频项目依赖(3.5→0.7)", 3.5, 0.75], ["微信缓存(2.9→0)", 2.9, 0], ["浏览器 profiles(2.5→1)", 2.5, 1.0], ["npm 全局包(2.2→1.3)", 2.2, 1.3]], "timeline": [["排查开始", 30.0], ["基线①", 55.8], ["清理①", 75.8], ["基线②", 84.5], ["安全层", 99.8], ["确认层", 121.0]], "potential": [["iCloud 本地副本(优化存储)", 41], ["Android SDK(你已排除)", 15], ["十月执行工件(项目活跃)", 9.6], ["运行中 app 缓存(Notion/Chrome)", 4.5], ["AI 助手索引库", 3.3], ["AVD 快照(Android 相关)", 3], ["sudo 系统区(遥测DB可达~10G)", 9.7]], "distribution": [2301.6, 1221.5, 1188.7, 947.6, 811.4, 693.9, 618.6, 573.3, 499.6, 499.2, 498.6, 476.6, 452.7, 404.9, 404.9, 404.9, 404.9, 404.9, 404.9, 400.2, 400.2, 390.2, 376.2, 367.6, 287.6, 287.6, 270.6, 192.2, 181.5, 153.3, 152.9, 152.9, 147.6, 147.6, 147.6, 147.2, 147.2, 136.2, 121.1, 100.1, 99.8, 99.8, 92.1, 90.6, 88.7, 80.1, 68.5, 59.4, 51.8, 50.6, 34.4, 33.5, 33.1, 32.7, 26.4, 26.2, 18.3, 18.2, 17.1, 17.1, 17.1, 16.9, 16.8, 16.4, 14.1, 10.3, 9.6, 7.1, 7.1, 7.1, 7.1, 6.2, 5.5, 5.2, 4.6, 4.6, 3.2, 3.2, 3.1, 2.7, 0.9, 0.7, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.1, 0.1, 0.1, 0.1]};
+const css = getComputedStyle(document.body);
+const C = k => css.getPropertyValue(k).trim();
+const P = { s1:C('--s1'), deep:C('--s1-deep'), wash:C('--s1-wash'), s2:C('--s2'),
+  t1:C('--text-1'), t2:C('--text-2'), muted:C('--muted'), grid:C('--grid'), base:C('--baseline'), surf:C('--surface-1') };
+const baseText = { color:P.t2, fontSize:12 };
+const tooltip = { trigger:'item', backgroundColor:P.surf, borderColor:P.grid,
+  textStyle:{ color:P.t1, fontSize:12 }, extraCssText:'box-shadow:none;' };
+function mk(id, opt){ const c=echarts.init(document.getElementById(id)); c.setOption(opt); return c; }
+const charts=[]; window.addEventListener('resize',()=>charts.forEach(c=>c.resize()));
+const TIERC = { safe:P.s1, confirm:P.s2, excluded:P.base };
+const TIER_LABEL = { safe:'安全层 · 可直接清', confirm:'待确认 · 需逐项勾选', excluded:'已排除 · 保留' };
+
+/* 发现构成 treemap(两模式共用;scan 按 tier 着色, cleaned 按 blue 阶梯) */
+const blues=['#0d366b','#104281','#184f95','#1c5cab','#256abf','#2a78d6','#3987e5','#5598e7','#6da7ec'];
+const fs=DATA.findings; const tot=fs.reduce((a,f)=>a+f.value,0)||1;
+charts.push(mk('compose',{ tooltip:{...tooltip, formatter:p=>`${p.name}<br/><b>${p.value} GB</b> · 占 ${(p.value/tot*100).toFixed(0)}%`},
+  series:[{ type:'treemap', data: fs.map((f,i)=>({ name:f.name, value:f.value,
+      itemStyle:{ color: DATA.mode==='scan' ? TIERC[f.tier] : blues[Math.min(i,8)],
+        borderColor:P.surf, borderWidth:2, borderRadius:4, gapWidth:2 },
+      label:{ show:true, formatter:'{b}\n{c} GB', fontSize:12,
+        color: DATA.mode==='scan' ? (f.tier==='excluded' ? P.t2 : '#ffffff') : (i<6?'#ffffff':'#0b0b0b'), lineHeight:17 } })),
+    left:0, right:0, top:6, bottom:6, leafDepth:1, roam:false, nodeClick:false, breadcrumb:{show:false} }] }));
+
+/* cleaned: 时间线 + dumbbell + 箱型 + 剩余潜力; scan: 大户排行 + 剩余潜力 */
+if (DATA.mode==='cleaned' && DATA.timeline.length>1){
+  charts.push(mk('timeline',{ tooltip:{...tooltip, trigger:'axis', formatter:ps=>`${ps[0].name}<br/>可用 <b>${ps[0].value} GiB</b>`},
+    grid:{left:44,right:70,top:24,bottom:30},
+    xAxis:{type:'category', data:DATA.timeline.map(t=>t[0]), axisLine:{lineStyle:{color:P.base}}, axisTick:{show:false}, axisLabel:{...baseText}},
+    yAxis:{type:'value', name:'GiB', nameTextStyle:{color:P.muted}, splitLine:{lineStyle:{color:P.grid,width:1}}, axisLabel:{...baseText}},
+    series:[{type:'line', step:'middle', data:DATA.timeline.map(t=>t[1]), symbol:'circle', symbolSize:9,
+      itemStyle:{color:P.s1, borderColor:P.surf, borderWidth:2}, lineStyle:{color:P.s1,width:2,cap:'round',join:'round'},
+      areaStyle:{color:P.s1, opacity:0.10},
+      label:{show:true, position:'top', color:P.t2, fontSize:12,
+        formatter:p=>(p.dataIndex===0||p.dataIndex===DATA.timeline.length-1)?p.value+' GiB':''}}]}));
+  const items=DATA.actions;
+  charts.push(mk('dumbbell',{ tooltip:{...tooltip, formatter:p=>{ const it=items[p.dataIndex];
+      return `${it[0]}<br/>清理前 ${it[1]} GB → 现状 ${it[2]} GB<br/>释放 <b>${(it[1]-it[2]).toFixed(1)} GB</b>`; } },
+    grid:{left:200,right:56,top:34,bottom:26},
+    legend:{data:['清理前','现状'], textStyle:{color:P.t2,fontSize:12}, top:0, itemWidth:10, itemHeight:10},
+    xAxis:{type:'value', name:'GB', nameTextStyle:{color:P.muted}, axisLabel:{...baseText}, splitLine:{lineStyle:{color:P.grid,width:1}}},
+    yAxis:{type:'category', inverse:true, data:items.map(i=>i[0]), axisLine:{show:false}, axisTick:{show:false}, axisLabel:{color:P.t2,fontSize:12}},
+    series:[{ name:'清理前', type:'custom', renderItem:(params,api)=>{ const it=items[params.dataIndex], y=params.dataIndex;
+      const b=api.coord([it[1],y]), a=api.coord([it[2],y]);
+      return {type:'group', children:[
+        {type:'line', shape:{x1:b[0],y1:b[1],x2:a[0],y2:a[1]}, style:{stroke:P.wash,width:4,cap:'round'}},
+        {type:'circle', shape:{cx:b[0],cy:b[1],r:5}, style:{fill:P.wash, stroke:P.surf, lineWidth:2}},
+        {type:'circle', shape:{cx:a[0],cy:a[1],r:5}, style:{fill:P.deep, stroke:P.surf, lineWidth:2}}]};},
+      data:items.map((it,idx)=>[it[1],it[2],idx]), encode:{x:[0,1],y:2}, z:10}]}));
+}
+if (DATA.mode==='scan'){
+  const ranked=[...fs].sort((a,b)=>b.value-a.value).slice(0,12);
+  charts.push(mk('dumbbell',{ tooltip:{...tooltip, formatter:p=>`${p.name}<br/><b>${p.value} GB</b> · ${p.data.tierText}`},
+    grid:{left:230,right:56,top:8,bottom:26},
+    xAxis:{type:'value', axisLabel:{...baseText}, splitLine:{lineStyle:{color:P.grid,width:1}}},
+    yAxis:{type:'category', inverse:true, data:ranked.map(f=>f.name), axisLine:{show:false}, axisTick:{show:false}, axisLabel:{color:P.t2,fontSize:12}},
+    series:[{type:'bar', data:ranked.map(f=>({value:f.value, itemStyle:{color:TIERC[f.tier], borderRadius:[0,4,4,0]}, tier:f.tier, tierText:TIER_LABEL[f.tier]||''})),
+      barWidth:16, label:{show:true, position:'right', color:P.t2, fontSize:12, formatter:'{c} GB'}}]}));
+}
+if (DATA.distribution.length){
+  const s=[...DATA.distribution].sort((a,b)=>a-b);
+  const q=(arr,p)=>{ const i=(arr.length-1)*p, lo=Math.floor(i), hi=Math.ceil(i); return arr[lo]+(arr[hi]-arr[lo])*(i-lo); };
+  const box=[Math.min(...s), q(s,.25), q(s,.5), q(s,.75), Math.max(...s)];
+  charts.push(mk('boxplot',{ tooltip:{...tooltip, formatter:()=>`最小 ${box[0].toFixed(1)} · Q1 ${box[1].toFixed(1)} · 中位 ${box[2].toFixed(1)}<br/>Q3 ${box[3].toFixed(1)} · 最大 ${box[4].toFixed(1)} MiB · n=${s.length}`},
+    grid:{left:60,right:30,top:30,bottom:36},
+    xAxis:{type:'category', data:['node_modules 尺寸分布'], axisLine:{lineStyle:{color:P.base}}, axisTick:{show:false}, axisLabel:{...baseText}},
+    yAxis:{type:'log', logBase:10, axisLabel:{...baseText, formatter:v=>v>=1024?(v/1024).toFixed(1)+'G':v+'M'}, splitLine:{lineStyle:{color:P.grid,width:1}}},
+    series:[{type:'boxplot', data:[box], itemStyle:{color:P.s1, borderColor:P.deep, borderWidth:2}, boxWidth:[14,40]},
+      {type:'scatter', symbolSize:6, itemStyle:{color:P.s2, opacity:.55, borderColor:P.surf, borderWidth:1},
+        data:s.map((v,i)=>[0.5+(Math.sin(i*12.9898)*43758.5453%1-0.5)*0.55, v])}]}));
+}
+if (DATA.potential.length){
+  charts.push(mk('potential',{ tooltip:{...tooltip, formatter:p=>`${p.name}<br/><b>${p.value} GB</b>`},
+    grid:{left:250,right:56,top:8,bottom:26},
+    xAxis:{type:'value', axisLabel:{...baseText}, splitLine:{lineStyle:{color:P.grid,width:1}}},
+    yAxis:{type:'category', inverse:true, data:DATA.potential.map(p=>p[0]), axisLine:{show:false}, axisTick:{show:false}, axisLabel:{color:P.t2,fontSize:12}},
+    series:[{type:'bar', data:DATA.potential.map(p=>p[1]), barWidth:16, itemStyle:{color:P.wash, borderRadius:[0,4,4,0]},
+      label:{show:true, position:'right', color:P.t2, fontSize:12, formatter:'{c} GB'}}]}));
+}
+
+</script></body></html>
