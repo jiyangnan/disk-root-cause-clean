@@ -39,6 +39,7 @@ du -sh <项目>/.worktrees                          # worktree 森林（实测 2
 - Chrome 端侧模型：`chrome-profile/OptGuideOnDeviceModel`（4G）
 - uv/pnpm/npm/brew/rustup：`~/.cache/uv`、`~/Library/pnpm/store`、`~/.npm`、`brew cleanup`、`rustup toolchain uninstall <旧>`
 - 失控日志：`lsof <file>` 找持有者 → `: > file` 截断（进程持 stdout 重定向实测）
+- ⚠️ `~/Library/Caches/ms-playwright` 是 Agent 自身浏览/自动化工具（如 gstack browse、webapp-testing）的无头浏览器二进制，删掉会弄坏自己的工具——要清也只 `playwright install` 换版本，别当普通缓存删
 
 ## 执行注意
 
